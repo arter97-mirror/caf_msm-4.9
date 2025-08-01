@@ -9,6 +9,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 #include <linux/module.h>
@@ -56,7 +57,8 @@ static bool workqueues_stopped;
 static bool ipa3_modem_init_cmplt;
 static bool first_time_handshake;
 struct mutex ipa3_qmi_lock;
-
+static DECLARE_WORK(ipa3_qmi_service_init_work,
+                    ipa3_qmi_service_init_worker);
 /* QMI A5 service */
 
 static struct msg_desc ipa3_indication_reg_req_desc = {
@@ -1361,11 +1363,10 @@ int ipa3_qmi_service_init(uint32_t wan_platform_type)
 	ipa3_qmi_indication_fin = false;
 	ipa3_modem_init_cmplt = false;
 	workqueues_stopped = false;
-
+	IPAWANDBG("scheduling the ipa3_qmi_service_init_worker\n");
 	if (!ipa3_svc_handle) {
-		INIT_WORK(&ipa3_qmi_service_init_work,
-			ipa3_qmi_service_init_worker);
-		schedule_work(&ipa3_qmi_service_init_work);
+		if (!schedule_work(&ipa3_qmi_service_init_work))
+		    IPAWANERR("ipa3_qmi_service_init_worker already in pending\n");
 	}
 	return 0;
 }
@@ -1383,6 +1384,7 @@ void ipa3_qmi_service_exit(void)
 			IPAWANERR("unregister qmi handle %p failed, ret=%d\n",
 			ipa3_svc_handle, ret);
 	}
+
 	if (ipa_svc_workqueue) {
 		flush_workqueue(ipa_svc_workqueue);
 		destroy_workqueue(ipa_svc_workqueue);
@@ -1406,7 +1408,6 @@ void ipa3_qmi_service_exit(void)
 		IPAWANERR(
 		"Error qmi_svc_event_notifier_unregister service %d, ret=%d\n",
 		IPA_Q6_SERVICE_SVC_ID, ret);
-
 	/* Release client handle */
 	ipa3_q6_clnt_svc_exit(0);
 
@@ -1414,6 +1415,7 @@ void ipa3_qmi_service_exit(void)
 		destroy_workqueue(ipa_clnt_req_workqueue);
 		ipa_clnt_req_workqueue = NULL;
 	}
+
 	if (ipa_clnt_resp_workqueue) {
 		destroy_workqueue(ipa_clnt_resp_workqueue);
 		ipa_clnt_resp_workqueue = NULL;
@@ -1431,6 +1433,7 @@ void ipa3_qmi_service_exit(void)
 	ipa3_qmi_modem_init_fin = false;
 	ipa3_qmi_indication_fin = false;
 	ipa3_modem_init_cmplt = false;
+	IPAWANDBG("in ipa3_qmi_service_exit completed\n");
 }
 
 void ipa3_qmi_stop_workqueues(void)
@@ -1674,4 +1677,3 @@ void ipa3_qmi_cleanup(void)
 {
 	mutex_destroy(&ipa3_qmi_lock);
 }
-

@@ -8,6 +8,8 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 #ifndef IPA_QMI_SERVICE_H
@@ -286,6 +288,8 @@ int ipa3_qmi_enable_per_client_stats(
 int ipa3_qmi_get_per_client_packet_stats(
 	struct ipa_get_stats_per_client_req_msg_v01 *req,
 	struct ipa_get_stats_per_client_resp_msg_v01 *resp);
+
+static void ipa3_qmi_service_init_worker(struct work_struct *work);
 
 void ipa3_qmi_init(void);
 
