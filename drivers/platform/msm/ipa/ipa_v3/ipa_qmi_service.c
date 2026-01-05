@@ -48,9 +48,9 @@ static DECLARE_DELAYED_WORK(work_recv_msg, ipa3_a5_svc_recv_msg);
 static struct workqueue_struct *ipa_svc_workqueue;
 static struct workqueue_struct *ipa_clnt_req_workqueue;
 static struct workqueue_struct *ipa_clnt_resp_workqueue;
+static struct work_struct *ipa3_qmi_service_init_work = NULL;
 static void *curr_conn;
 static bool ipa3_qmi_modem_init_fin, ipa3_qmi_indication_fin;
-static struct work_struct ipa3_qmi_service_init_work;
 static uint32_t ipa_wan_platform;
 struct ipa3_qmi_context *ipa3_qmi_ctx;
 static bool workqueues_stopped;
@@ -1365,7 +1365,14 @@ int ipa3_qmi_service_init(uint32_t wan_platform_type)
 	workqueues_stopped = false;
 	IPAWANDBG("scheduling the ipa3_qmi_service_init_worker\n");
 	if (!ipa3_svc_handle) {
-		if (!schedule_work(&ipa3_qmi_service_init_work))
+		ipa3_qmi_service_init_work = kzalloc(sizeof(struct work_struct), GFP_KERNEL);
+
+		if (!ipa3_qmi_service_init_work)
+			return -ENOMEM;
+
+		INIT_WORK(ipa3_qmi_service_init_work, ipa3_qmi_service_init_worker);
+
+		if (!schedule_work(ipa3_qmi_service_init_work))
 		    IPAWANERR("ipa3_qmi_service_init_worker already in pending\n");
 	}
 	return 0;
@@ -1447,7 +1454,13 @@ void ipa3_qmi_stop_workqueues(void)
 	cancel_delayed_work(&work_recv_msg);
 	cancel_delayed_work(&ipa3_work_recv_msg_client);
 	cancel_delayed_work(&ipa3_work_svc_arrive);
-	cancel_delayed_work(&ipa3_work_svc_exit);
+	cancel_work_sync(ipa3_qmi_service_init_work);
+
+	if(ipa3_qmi_service_init_work != NULL) {
+
+		kfree(ipa3_qmi_service_init_work);
+		ipa3_qmi_service_init_work = NULL;
+	}
 }
 
 
