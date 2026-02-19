@@ -57,8 +57,6 @@ static bool workqueues_stopped;
 static bool ipa3_modem_init_cmplt;
 static bool first_time_handshake;
 struct mutex ipa3_qmi_lock;
-static DECLARE_WORK(ipa3_qmi_service_init_work,
-                    ipa3_qmi_service_init_worker);
 /* QMI A5 service */
 
 static struct msg_desc ipa3_indication_reg_req_desc = {
